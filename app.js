@@ -461,10 +461,6 @@ function openModal(modalName) {
     return;
   }
 
-  if (isTracking) {
-    stopTracking();
-  }
-
   isKeyboardDrawing = false;
   isButtonDrawing = false;
   syncDrawingState();
