@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'; frame-ancestors 'none'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; img-src 'self' data:; style-src 'self'; media-src 'self' blob:; worker-src 'self' blob:">
+    <meta name="referrer" content="no-referrer">
+    <title>Hand Tracker</title>
+    <link rel="stylesheet" href="styles.css?v=10">
+  </head>
+  <body>
+    <nav class="top-nav" aria-label="Main navigation">
+      <button class="nav-button is-active" type="button" data-modal-close>Paint</button>
+      <button class="nav-button" type="button" data-modal-button="settings">Settings</button>
+      <button class="nav-button" type="button" data-modal-button="donate">Donate &#x2615;</button>
+      <button class="nav-button" type="button" data-modal-button="support">Support</button>
+      <button class="nav-button" type="button" data-modal-button="privacy">Privacy</button>
+    </nav>
+
+    <main id="appContent" class="app-content">
+      <section class="app-shell">
+        <section class="stage" aria-label="Camera hand tracking">
+          <video id="webcam" autoplay playsinline muted></video>
+          <canvas id="paintCanvas"></canvas>
+          <canvas id="overlay"></canvas>
+        </section>
+
+        <aside class="controls">
+          <div>
+            <p class="eyebrow">Browser hand tracking</p>
+            <h2>Finger Paint</h2>
+            <p class="copy">
+              Hold D or tap Draw, then move one raised index finger. The camera feed stays in your browser.
+            </p>
+          </div>
+
+          <button id="startButton" type="button">Start camera</button>
+          <p id="errorText" class="error" role="alert"></p>
+
+          <button id="drawButton" class="draw-button" type="button" aria-pressed="false">Draw</button>
+
+          <div class="tool-group">
+            <label class="control-label" for="colorPicker">Line color</label>
+            <div class="color-row">
+              <input id="colorPicker" type="color" value="#f1c84b">
+              <div id="colorPreview" class="color-preview" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <div class="button-row">
+            <button id="undoButton" class="secondary-button" type="button" disabled>Undo</button>
+            <button id="redoButton" class="secondary-button" type="button" disabled>Redo</button>
+          </div>
+
+          <button id="clearButton" class="secondary-button" type="button">Clear canvas</button>
+
+          <div class="readout">
+            <span>Status</span>
+            <strong id="statusText">Camera off</strong>
+          </div>
+          <div class="readout">
+            <span>Draw mode</span>
+            <strong id="drawKeyText">Released</strong>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <div id="modalBackdrop" class="modal-backdrop" hidden>
+      <section id="settingsModal" class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+        <button class="modal-close" type="button" data-modal-close aria-label="Close dialog">Close</button>
+        <div>
+          <p class="eyebrow">Preferences</p>
+          <h1 id="settingsTitle">Settings</h1>
+          <p class="copy">Choose the theme that feels best for your screen and lighting.</p>
+        </div>
+
+        <div class="settings-panel">
+          <h2>Theme</h2>
+          <div class="theme-options" role="radiogroup" aria-label="Theme">
+            <label class="theme-option">
+              <input type="radio" name="theme" value="dark" checked>
+              <span>Dark</span>
+            </label>
+            <label class="theme-option">
+              <input type="radio" name="theme" value="light">
+              <span>Light</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section id="donateModal" class="modal-panel donate-page" role="dialog" aria-modal="true" aria-labelledby="donateTitle" hidden>
+        <button class="modal-close" type="button" data-modal-close aria-label="Close dialog">Close</button>
+        <p class="eyebrow">Donate</p>
+        <h1 id="donateTitle">Support This Project</h1>
+        <p>You can support me by scanning this QR Code, it'd be very good!</p>
+        <div class="qr-frame">
+          <img src="pictures/qr.jpg" alt="Donation QR code">
+        </div>
+      </section>
+
+      <section id="supportModal" class="modal-panel support-page" role="dialog" aria-modal="true" aria-labelledby="supportTitle" hidden>
+        <button class="modal-close" type="button" data-modal-close aria-label="Close dialog">Close</button>
+        <p class="eyebrow">Support</p>
+        <h1 id="supportTitle">Need Help?</h1>
+        <p>
+          If you found any bugs or issues while using this hand-tracking paint app, feel free to tell me. Reports about
+          camera problems, drawing bugs, layout issues, mobile problems, or confusing behavior are welcome.
+        </p>
+        <p>
+          Contact email:
+          <a href="mailto:teeradech.saengcha007@gmail.com">teeradech.saengcha007@gmail.com</a>
+        </p>
+      </section>
+
+      <section id="privacyModal" class="modal-panel privacy-page" role="dialog" aria-modal="true" aria-labelledby="privacyTitle" hidden>
+        <button class="modal-close" type="button" data-modal-close aria-label="Close dialog">Close</button>
+        <p class="eyebrow">Privacy</p>
+        <h1 id="privacyTitle">We Value Your Privacy</h1>
+        <p>
+          This hand-tracking paint app is designed to run directly in your browser. Your camera is used so the app can
+          detect your hand, follow your fingertip, and let you draw on the screen. The camera feed is not uploaded by
+          this app, not saved by this app, and not sent to a private server owned by this project. The hand tracking
+          happens locally in the browser tab after the required model files load.
+        </p>
+        <p>
+          You stay in control of camera access. The app only starts the camera after you press the Start camera button
+          and grant permission in your browser. When you press Stop camera, the app stops the active camera tracks so
+          your browser can release the camera. Closing the tab also stops the session. If you ever feel unsure, you can
+          use your browser's site settings to revoke camera permission for this page.
+        </p>
+        <p>
+          The drawing you create is kept in the page while the page is open. It is not automatically uploaded, synced, or
+          attached to an account. Undo, redo, and clear canvas are handled in memory inside this tab. Refreshing or
+          closing the page may remove the current drawing because the app is not trying to store your artwork silently.
+        </p>
+        <p>
+          The app uses MediaPipe Tasks Vision from a public CDN to load the hand-tracking library and model assets. Your
+          browser may contact that CDN to download those files. After the files are loaded, the hand landmark detection
+          runs in the browser. This project does not add analytics scripts, advertising trackers, account login, hidden
+          recording, or background upload code.
+        </p>
+        <p>
+          Browser permissions are important. Modern browsers protect camera access by asking for permission and showing a
+          camera indicator while the camera is active. If the page is opened as a local file, the browser may block
+          camera access for security reasons. Running the app from localhost lets the browser apply normal camera
+          permission rules while still keeping the experience on your own machine.
+        </p>
+        <p>
+          We believe a creative tool should be clear about what it does. The camera is used for hand tracking, the
+          fingertip position is used to draw, and theme preferences are saved locally so the page can remember whether
+          you prefer dark mode or light mode. We do not ask for your name, email address, location, contacts, microphone,
+          files, or any other permission that is not needed for this drawing experience.
+        </p>
+        <p>
+          If you share your screen, stream your browser, install browser extensions, or use third-party recording
+          software, those tools may be able to see what appears on your screen. That is separate from this app. This app
+          itself is built to keep the camera feed inside the browser session and to give you a visible Stop camera
+          control whenever tracking is running.
+        </p>
+        <p>
+          In short: the camera is for live hand tracking, your drawing stays local to the page, the privacy-sensitive
+          controls are visible, and you can stop the camera whenever you want.
+        </p>
+      </section>
+    </div>
+
+    <p class="credit-label">Prompted by DaCowDev, Programming by Codex.</p>
+
+    <script type="module" src="app.js?v=10"></script>
+  </body>
+</html>
