@@ -6,13 +6,12 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'; frame-ancestors 'none'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; img-src 'self' data:; style-src 'self'; media-src 'self' blob:; worker-src 'self' blob:">
     <meta name="referrer" content="no-referrer">
     <title>Hand Tracker</title>
-    <link rel="stylesheet" href="styles.css?v=10">
+    <link rel="stylesheet" href="styles.css?v=11">
   </head>
   <body>
     <nav class="top-nav" aria-label="Main navigation">
       <button class="nav-button is-active" type="button" data-modal-close>Paint</button>
       <button class="nav-button" type="button" data-modal-button="settings">Settings</button>
-      <button class="nav-button" type="button" data-modal-button="donate">Donate &#x2615;</button>
       <button class="nav-button" type="button" data-modal-button="support">Support</button>
       <button class="nav-button" type="button" data-modal-button="privacy">Privacy</button>
     </nav>
@@ -87,16 +86,6 @@
               <span>Light</span>
             </label>
           </div>
-        </div>
-      </section>
-
-      <section id="donateModal" class="modal-panel donate-page" role="dialog" aria-modal="true" aria-labelledby="donateTitle" hidden>
-        <button class="modal-close" type="button" data-modal-close aria-label="Close dialog">Close</button>
-        <p class="eyebrow">Donate</p>
-        <h1 id="donateTitle">Support This Project</h1>
-        <p>You can support me by scanning this QR Code, it'd be very good!</p>
-        <div class="qr-frame">
-          <img src="pictures/qr.jpg" alt="Donation QR code">
         </div>
       </section>
 
