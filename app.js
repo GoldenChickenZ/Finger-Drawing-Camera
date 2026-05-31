@@ -8,6 +8,9 @@ const undoButton = document.querySelector("#undoButton");
 const redoButton = document.querySelector("#redoButton");
 const colorPicker = document.querySelector("#colorPicker");
 const colorPreview = document.querySelector("#colorPreview");
+const thicknessRange = document.querySelector("#thicknessRange");
+const thicknessValue = document.querySelector("#thicknessValue");
+const skeletonButton = document.querySelector("#skeletonButton");
 const errorText = document.querySelector("#errorText");
 const statusText = document.querySelector("#statusText");
 const drawKeyText = document.querySelector("#drawKeyText");
@@ -22,16 +25,16 @@ const overlayCtx = overlayCanvas.getContext("2d");
 const paintCtx = paintCanvas.getContext("2d");
 
 let handLandmarker;
-let drawingUtils;
 let handConnections;
 let animationFrameId;
 let isTracking = false;
 let isKeyboardDrawing = false;
 let isButtonDrawing = false;
+let showSkeleton = true;
 let lastVideoTime = -1;
 let activeStroke;
 let lineColor = colorPicker.value;
-const lineWidth = 8;
+let lineWidth = Number(thicknessRange.value);
 const strokeHistory = [];
 const redoHistory = [];
 const allowedThemes = new Set(["dark", "light"]);
@@ -58,6 +61,16 @@ redoButton.addEventListener("click", redoStroke);
 colorPicker.addEventListener("input", () => {
   lineColor = colorPicker.value;
   colorPreview.style.background = lineColor;
+});
+thicknessRange.addEventListener("input", () => {
+  lineWidth = Number(thicknessRange.value);
+  thicknessValue.textContent = `${lineWidth} px`;
+});
+skeletonButton.addEventListener("click", () => {
+  showSkeleton = !showSkeleton;
+  skeletonButton.setAttribute("aria-pressed", String(showSkeleton));
+  skeletonButton.textContent = showSkeleton ? "Hand Skeleton On" : "Hand Skeleton Off";
+  clearOverlayCanvas();
 });
 window.addEventListener("keydown", (event) => {
   const key = event.key.toLowerCase();
@@ -181,7 +194,6 @@ function stopCameraStream() {
 
 async function createHandLandmarker() {
   const {
-    DrawingUtils,
     FilesetResolver,
     HandLandmarker,
   } = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${mediaPipeVersion}/vision_bundle.mjs`);
@@ -202,7 +214,6 @@ async function createHandLandmarker() {
     minTrackingConfidence: 0.55,
   };
 
-  drawingUtils = new DrawingUtils(overlayCtx);
   handConnections = HandLandmarker.HAND_CONNECTIONS;
 
   try {
@@ -234,28 +245,22 @@ function detectHands() {
 
 function drawResults(results) {
   clearOverlayCanvas();
+  const frame = getContainFrame(overlayCanvas);
 
-  for (const landmarks of results.landmarks ?? []) {
-    const mirrored = landmarks.map((point) => ({
-      ...point,
-      x: 1 - point.x,
-    }));
+  if (showSkeleton) {
+    for (const landmarks of results.landmarks ?? []) {
+      const mappedLandmarks = landmarks.map((point) => toDisplayPoint({
+        nx: 1 - point.x,
+        ny: point.y,
+      }, frame));
 
-    drawingUtils.drawConnectors(mirrored, handConnections, {
-      color: "#6ee7d2",
-      lineWidth: 4,
-    });
-    drawingUtils.drawLandmarks(mirrored, {
-      color: "#f1c84b",
-      fillColor: "#f1c84b",
-      lineWidth: 2,
-      radius: 5,
-    });
+      drawHandStructure(mappedLandmarks);
+    }
   }
 
   const point = getDrawingPoint(results);
   if (point) {
-    drawPointer(point);
+    drawPointer(point, frame);
   }
 }
 
@@ -291,24 +296,54 @@ function getDrawingPoint(results) {
     return undefined;
   }
 
-  return toCanvasPoint(landmarks[8], paintCanvas);
+  return toNormalizedPoint(landmarks[8]);
 }
 
-function toCanvasPoint(point, targetCanvas) {
+function toNormalizedPoint(point) {
   return {
-    x: (1 - point.x) * targetCanvas.width,
-    y: point.y * targetCanvas.height,
     nx: 1 - point.x,
     ny: point.y,
   };
 }
 
-function drawPointer(point) {
+function drawPointer(point, frame) {
+  const mapped = toDisplayPoint(point, frame);
   overlayCtx.beginPath();
-  overlayCtx.arc(point.x, point.y, isDrawingActive() ? 16 : 11, 0, Math.PI * 2);
+  overlayCtx.arc(mapped.x, mapped.y, isDrawingActive() ? 16 : 11, 0, Math.PI * 2);
   overlayCtx.strokeStyle = isDrawingActive() ? lineColor : "#ffffff";
   overlayCtx.lineWidth = isDrawingActive() ? 5 : 3;
   overlayCtx.stroke();
+}
+
+function drawHandStructure(landmarks) {
+  overlayCtx.strokeStyle = "#6ee7d2";
+  overlayCtx.fillStyle = "#f1c84b";
+  overlayCtx.lineWidth = 4;
+  overlayCtx.lineCap = "round";
+  overlayCtx.lineJoin = "round";
+
+  for (const connection of handConnections) {
+    const [startIndex, endIndex] = Array.isArray(connection)
+      ? connection
+      : [connection.start, connection.end];
+
+    const start = landmarks[startIndex];
+    const end = landmarks[endIndex];
+    if (!start || !end) {
+      continue;
+    }
+
+    overlayCtx.beginPath();
+    overlayCtx.moveTo(start.x, start.y);
+    overlayCtx.lineTo(end.x, end.y);
+    overlayCtx.stroke();
+  }
+
+  for (const point of landmarks) {
+    overlayCtx.beginPath();
+    overlayCtx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+    overlayCtx.fill();
+  }
 }
 
 function updateReadout(results) {
@@ -341,6 +376,42 @@ function resizeDrawingCanvas(targetCanvas, width, height) {
     redrawPaintCanvas();
     return;
   }
+}
+
+function getContainFrame(targetCanvas) {
+  const videoWidth = video.videoWidth || 16;
+  const videoHeight = video.videoHeight || 9;
+  const canvasWidth = targetCanvas.width || 1;
+  const canvasHeight = targetCanvas.height || 1;
+  const videoAspect = videoWidth / videoHeight;
+  const canvasAspect = canvasWidth / canvasHeight;
+
+  if (videoAspect > canvasAspect) {
+    const width = canvasWidth;
+    const height = width / videoAspect;
+    return {
+      x: 0,
+      y: (canvasHeight - height) / 2,
+      width,
+      height,
+    };
+  }
+
+  const height = canvasHeight;
+  const width = height * videoAspect;
+  return {
+    x: (canvasWidth - width) / 2,
+    y: 0,
+    width,
+    height,
+  };
+}
+
+function toDisplayPoint(point, frame) {
+  return {
+    x: frame.x + point.nx * frame.width,
+    y: frame.y + point.ny * frame.height,
+  };
 }
 
 function clearPaintCanvas() {
@@ -401,8 +472,10 @@ function renderStroke(stroke) {
     return;
   }
 
+  const frame = getContainFrame(paintCanvas);
+
   if (stroke.points.length === 1) {
-    const point = getRenderPoint(stroke.points[0]);
+    const point = toDisplayPoint(stroke.points[0], frame);
     paintCtx.beginPath();
     paintCtx.arc(point.x, point.y, stroke.width / 2, 0, Math.PI * 2);
     paintCtx.fillStyle = stroke.color;
@@ -411,13 +484,13 @@ function renderStroke(stroke) {
   }
 
   for (let index = 0; index < stroke.points.length - 1; index++) {
-    renderStrokeSegment(stroke, index);
+    renderStrokeSegment(stroke, index, frame);
   }
 }
 
-function renderStrokeSegment(stroke, pointIndex) {
-  const start = getRenderPoint(stroke.points[pointIndex]);
-  const end = getRenderPoint(stroke.points[pointIndex + 1]);
+function renderStrokeSegment(stroke, pointIndex, frame = getContainFrame(paintCanvas)) {
+  const start = toDisplayPoint(stroke.points[pointIndex], frame);
+  const end = toDisplayPoint(stroke.points[pointIndex + 1], frame);
   paintCtx.beginPath();
   paintCtx.moveTo(start.x, start.y);
   paintCtx.lineTo(end.x, end.y);
@@ -426,13 +499,6 @@ function renderStrokeSegment(stroke, pointIndex) {
   paintCtx.lineCap = "round";
   paintCtx.lineJoin = "round";
   paintCtx.stroke();
-}
-
-function getRenderPoint(point) {
-  return {
-    x: point.nx * paintCanvas.width,
-    y: point.ny * paintCanvas.height,
-  };
 }
 
 function updateHistoryButtons() {

@@ -112,12 +112,12 @@ body.modal-open .credit-label {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 #webcam {
-  object-fit: fill;
   transform: scaleX(-1);
+  background: #000;
 }
 
 #overlay {
@@ -240,6 +240,29 @@ h2 {
   align-items: center;
   gap: 12px;
   margin-top: 10px;
+}
+
+.range-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+#thicknessRange {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+#thicknessValue {
+  min-width: 56px;
+  text-align: right;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+#skeletonButton {
+  margin-top: 14px;
 }
 
 #colorPicker {

@@ -6,7 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'; frame-ancestors 'none'; script-src 'self' https://cdn.jsdelivr.net 'wasm-unsafe-eval'; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; img-src 'self' data:; style-src 'self'; media-src 'self' blob:; worker-src 'self' blob:">
     <meta name="referrer" content="no-referrer">
     <title>Hand Tracker</title>
-    <link rel="stylesheet" href="styles.css?v=11">
+    <link rel="stylesheet" href="styles.css?v=15">
   </head>
   <body>
     <nav class="top-nav" aria-label="Main navigation">
@@ -44,6 +44,13 @@
               <input id="colorPicker" type="color" value="#f1c84b">
               <div id="colorPreview" class="color-preview" aria-hidden="true"></div>
             </div>
+            <label class="control-label" for="thicknessRange">Line thickness</label>
+            <div class="range-row">
+              <input id="thicknessRange" type="range" min="2" max="32" step="1" value="8">
+              <strong id="thicknessValue">8 px</strong>
+            </div>
+            <button id="skeletonButton" class="secondary-button" type="button" aria-pressed="true">Hand Skeleton On</button>
+            <button id="pinchButton" class="secondary-button" type="button" aria-pressed="false" disabled>Two-finger draw</button>
           </div>
 
           <div class="button-row">
@@ -157,6 +164,6 @@
 
     <p class="credit-label">Prompted by DaCowDev, Programmed by Codex.</p>
 
-    <script type="module" src="app.js?v=11"></script>
+    <script type="module" src="app.js?v=16"></script>
   </body>
 </html>
